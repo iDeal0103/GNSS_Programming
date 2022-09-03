@@ -714,7 +714,7 @@ def constaneously_RTK_withfilter_SPP_baseline_length_constrained(start_time, end
 
     coordinates = []
     # 第一个历元进行最小二乘解算，给初值
-    knownStation_coor = list(SPP.SPP_on_broadcastrecords(knownStation_ob_records, br_records, Tr, init_coor=knownStation_coor)[:3])
+    knownStation_coor = list(SPP.SPP_on_GPS_broadcastrecords(knownStation_ob_records, br_records, Tr, init_coor=knownStation_coor)[:3])
     unknownStation_init_coor = knownStation_coor
     sta2_coor, P, N_float, base_svn, diff_svns, Pse = RTK2.DD_onCarrierPhase_and_Pseudorange_1known(knownStation_ob_records, unknownStation_ob_records, br_records, Tr, knownStation_coor, unknownStation_init_coor, bands=[band1, band2], ambi_fix=False)
     coordinates.append(sta2_coor)
@@ -730,7 +730,7 @@ def constaneously_RTK_withfilter_SPP_baseline_length_constrained(start_time, end
     Tr += datetime.timedelta(seconds=interval_time)
     n = 0
     while Tr < end_time:
-        knownStation_coor = list(SPP.SPP_on_broadcastrecords(knownStation_ob_records, br_records, Tr, init_coor=knownStation_coor)[:3])
+        knownStation_coor = list(SPP.SPP_on_GPS_broadcastrecords(knownStation_ob_records, br_records, Tr, init_coor=knownStation_coor)[:3])
         coor = knownStation_coor
         # 找到Tr时刻两个观测站观测记录
         knownStation_ob_records_atTr = list(filter(lambda o:o.time == Tr and o.SVN[0] == "G" and o.data != "", knownStation_ob_records))

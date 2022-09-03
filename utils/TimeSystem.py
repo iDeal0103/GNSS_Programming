@@ -176,8 +176,8 @@ def from_datetime_cal_JD(date_time):
     second = date_time.second
     microsecond = date_time.microsecond
     # 将minute和second化入hour
-    H = hour+minute/60+(second+microsecond/1000000)/3600
-    # H = hour + minute / 60
+    # H = hour+minute/60+(second+microsecond/1000000)/3600
+    H = hour
     if M <= 2:
         y = Y-1
         m = M+12
@@ -206,9 +206,19 @@ def from_JD_cal_datetime(JD):
 
 
 #由GPS的date_time时间计算GPS周和GPS秒
-def from_datetime_cal_GPSws(datetime):
-    JD = from_datetime_cal_JD(datetime)
+def from_datetime_cal_GPSws(the_datetime):
+    # 修改版
+    Y=the_datetime.year
+    M=the_datetime.month
+    D=the_datetime.day
+    H=the_datetime.hour
+    round_datetime=datetime.datetime(year=Y, month=M, day=D, hour=H)
+    second=cal_deltatime_second(the_datetime-round_datetime)
+    JD = from_datetime_cal_JD(round_datetime)
+
+    # JD = from_datetime_cal_JD(the_datetime)
     GPS_week, GPS_second = from_JD_cal_GPStime(JD)
+    GPS_second += second
     return GPS_week, GPS_second
 
 
@@ -218,7 +228,7 @@ def from_UTCtime_cal_BDtime_2(UTCtime):
     GPS_week,GPS_second = from_JD_cal_GPStime(JD)
     BD_week=GPS_week-1356
     BD_second=GPS_second-14
-    return BD_week,BD_second
+    return BD_week, BD_second
 
 
 def from_GPStime_cal_JD(GPS_week, GPS_second):

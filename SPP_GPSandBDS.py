@@ -25,7 +25,7 @@ def cal_ClockError_BDS_GPSws_withRelativisticEffect(time, SVN, brs):
     # (2)Calculate the semimajor axis
     a = br.sqrt_a**2
     # (3)Compute mean motion – rad/s
-    n0 = math.sqrt(const.miu/a**3)
+    n0 = math.sqrt(const.miu_GPS / a ** 3)
     # (4)Correct mean motion
     n = n0+br.delta_n
     # (5)Mean anomaly Mk at epoch t

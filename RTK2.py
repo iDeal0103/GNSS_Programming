@@ -480,12 +480,12 @@ def DD_onCPandPR_solve_ambiguity(station1_ob_records, station2_ob_records, br_re
         A.append(N_DD)
 
     # 构造权阵并求解
-    Ps1 = np.linalg.inv(get_DD_Qmatrix(len(l1), 2))     # 相位
+    Ps1 = np.linalg.inv(get_DD_Qmatrix(len(l1), 0.05))     # 相位
     Pz = Ps1
 
     A = np.array(A)
     l = np.array(l1)
-    l = np.array(l1)-np.array(l2)
+    # l = np.array(l1)-np.array(l2)
 
     # 解算
     # x = np.linalg.inv(A.T @ Pz @ A) @ (A.T @ Pz @ l)
@@ -779,7 +779,7 @@ if __name__ == "__main__":
     # init_coor = [3658785.6000, 784471.1000, 5147870.7000]
     init_coor = [4331297.3480, 567555.6390, 4633133.7280]      # zimm
     # init_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
-    # init_coor = SPP.SPP_on_broadcastrecords(unknownStation_ob_records, br_records, Tr+datetime.timedelta(seconds=60))[0:3]
+    # init_coor = SPP.SPP_on_GPS_broadcastrecords(unknownStation_ob_records, br_records, Tr+datetime.timedelta(seconds=60))[0:3]
     # init_coor = [0, 0, 0]
     # knownStation_coor = [0.389873613453103E+07, 0.855345521080705E+06, 0.495837257579542E+07]  # leij
     # knownStation_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2

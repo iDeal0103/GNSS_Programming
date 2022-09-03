@@ -341,7 +341,7 @@ if __name__ == "__main__":
     # init_coor = [3658785.6000, 784471.1000, 5147870.7000]
     # init_coor = [4331297.3480, 567555.6390, 4633133.7280]      # zimm
     init_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
-    # init_coor = SPP.SPP_on_broadcastrecords(unknownStation_ob_records, br_records, Tr+datetime.timedelta(seconds=60))[0:3]
+    # init_coor = SPP.SPP_on_GPS_broadcastrecords(unknownStation_ob_records, br_records, Tr+datetime.timedelta(seconds=60))[0:3]
     # init_coor = [0, 0, 0]
     # knownStation_coor = [0.389873613453103E+07, 0.855345521080705E+06, 0.495837257579542E+07]  # leij
     knownStation_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2

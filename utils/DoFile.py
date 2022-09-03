@@ -78,10 +78,10 @@ def timeString2UTC_2(timeString):
     """
     tslist=timeString.split()
     tslist[0]=tslist[0]
-    UTCtime=datetime.datetime(int(tslist[0]),int(tslist[1]),
+    dttime=datetime.datetime(int(tslist[0]),int(tslist[1]),
         int(tslist[2]),int(tslist[3]),int(tslist[4]))
     +datetime.timedelta(seconds=float(tslist[5]))
-    return UTCtime
+    return dttime
     
 def get_standard_SVN(system, no):
     if isinstance(no, str):
@@ -241,7 +241,8 @@ class Renix304_navigation_record_BDS():
         self.system = 'C'
         # 解析第一行
         self.SVN = data[0][0:3]
-        self.toc = timeString2UTC_2(data[0][3:23])
+        self.toc = timeString2UTC_2(data[0][3:23]) + datetime.timedelta(seconds=14)
+        # self.toc = timeString2UTC_2(data[0][3:23])
         self.a0 = getfloat(data[0][23:42])
         self.a1 = getfloat(data[0][42:61])
         self.a2 = getfloat(data[0][61:80])
@@ -256,7 +257,8 @@ class Renix304_navigation_record_BDS():
         self.Cus = getfloat(data[2][42:61])
         self.sqrt_a = getfloat(data[2][61:80])
         # 解析第四行
-        self.toe = getfloat(data[3][4:23])
+        self.toe = getfloat(data[3][4:23]) + 14
+        # self.toe = getfloat(data[3][4:23])
         self.Cic = getfloat(data[3][23:42])
         self.omega0 = getfloat(data[3][42:61])
         self.Cis = getfloat(data[3][61:80])
@@ -268,7 +270,8 @@ class Renix304_navigation_record_BDS():
         # 解析第六行
         self.i_dot = getfloat(data[5][4:23])
         self.spare1 = getfloat(data[5][23:42])
-        self.BDS_week = getfloat(data[5][42:61])
+        self.BDS_week = getfloat(data[5][42:61]) + 1356
+        # self.BDS_week = getfloat(data[5][42:61])
         self.spare2 = getfloat(data[5][61:80])
 
 
@@ -402,7 +405,7 @@ GPS_signal_priority={'L1':['1C', '1P', '1Y', '1W', '1M', '1N', '1S', '1L'],
                      'L2':['2P', '2Y', '2W', '2C', '2M', '2N', '2D', '2S', '2L', '2X'],
                      'L5':['5I', '5Q', '5X']}
 
-BDS_signal_priority={'B1':['2I', '2Q', '2X'], 'B2':['7I', '7Q', '7X'], 'B3':['6I', '6Q', '6X']}
+BDS_signal_priority={'B1':['2I', '2Q', '2X'], 'B2':['7I', '7Q', '7X'], 'B3':['6I', '6Q', '6X'],}
 
 def getreal(num_string):
     if num_string == "":
@@ -861,17 +864,17 @@ class clk_receiver_record:
 
 # 读取GPS的clk文件,返回GPS_observation_record类的记录对象
 def read_GPS_clkFile(GPS_clkfile):    
-    clkf=open(GPS_clkfile,"r")
-    clk_satellite_records=[]     #存储clk_satellite_record的列表
-    clk_receiver_records=[]     #存储clk_receiver_record的列表
-    line=clkf.readline()
-    #跳过头文件,如果后续有需要可以精细读取头文件
+    clkf=open(GPS_clkfile, "r")
+    clk_satellite_records = []     # 存储clk_satellite_record的列表
+    clk_receiver_records = []     # 存储clk_receiver_record的列表
+    line = clkf.readline()
+    # 跳过头文件,如果后续有需要可以精细读取头文件
     while line.strip()!="END OF HEADER":
         line=clkf.readline()
-    #读取各条记录
-    line=clkf.readline()
+    # 读取各条记录
+    line = clkf.readline()
     while line.strip()!="":
-        #接收站记录
+        # 接收站记录
         if line[:2]=="AR":
             r_name=line[3:7].strip()
             year=int(line[8:12])
@@ -887,7 +890,7 @@ def read_GPS_clkFile(GPS_clkfile):
                 data.append(float(line[(40+20*i):(59+20*i)]))
             clk_receiver_records.append(clk_receiver_record(r_name,time,data))
             line=clkf.readline()
-        #卫星记录
+        # 卫星记录
         elif line[:2]=="AS":
             system=line[3:4]
             PRN=line[4:7].strip()
@@ -897,13 +900,13 @@ def read_GPS_clkFile(GPS_clkfile):
             hour=int(line[18:21])
             minute=int(line[21:24])
             second=float(line[24:34])
-            time=datetime.datetime(year, month, day,hour,minute)+datetime.timedelta(seconds=second)
+            time=datetime.datetime(year, month, day, hour, minute)+datetime.timedelta(seconds=second)
             data_num=int(line[34:37])
             data=[]
             for i in range(data_num):
                 data.append(float(line[(40+20*i):(59+20*i)]))
-            clk_satellite_records.append(clk_satellite_record(system,PRN,time,data))
-            line=clkf.readline()
+            clk_satellite_records.append(clk_satellite_record(system, PRN, time, data))
+            line = clkf.readline()
     clkf.close()
     return clk_satellite_records, clk_receiver_records
 
@@ -934,7 +937,6 @@ class pos_xyz_record:
              neu = CoorTrasnform.cal_NEU(base_coor, self.pos_value)
              self.pos_value =[neu[1], neu[0], neu[2]]
             # 需要将NEU转成ENU
-
         else:
             self.pos_value[0] -= base_coor[0]
             self.pos_value[1] -= base_coor[1]

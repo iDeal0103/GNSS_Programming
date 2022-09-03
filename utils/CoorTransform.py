@@ -20,6 +20,7 @@ import math
 from math import sin
 from math import cos
 import numpy as np
+import utils.const as const
 
 #def cal_XYZ2BLH(X,Y,Z,e=0.08181333402,a=6378245.0):
 def cal_XYZ2BLH(X,Y,Z,e=0.08181919084,a=6378137.0): 
@@ -91,7 +92,7 @@ def cal_ele_and_A(stationcenter_coor,object_coor):
 
 
 #计算地球自转改正项
-def earth_rotation_correction(coor, dt, w=7.2921151467e-5):
+def earth_rotation_correction(coor, dt, system='G'):
     """
     Parameters
     ----------
@@ -103,6 +104,10 @@ def earth_rotation_correction(coor, dt, w=7.2921151467e-5):
         Xeci,Yeci,Zeci : 发射信号时刻卫星,在观测站接收到信号时刻的ECEF坐标系中的坐标
 
     """
+    if system=="G":
+        w = const.we_GPS
+    elif system=='C':
+        w = const.we_BDS
     coor_ecef = np.array(coor)
     R = np.array([[math.cos(w*dt), math.sin(w*dt), 0], [-math.sin(w*dt), math.cos(w*dt), 0], [0, 0, 1]])
     corrected_coor = R@coor_ecef

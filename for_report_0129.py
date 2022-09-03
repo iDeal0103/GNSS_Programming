@@ -68,8 +68,8 @@ vs = []
 Tr = Tr_strat
 print("开始解算各历元单点定位!")
 while Tr < Tr_end:
-    Xk, Yk, Zk, Q, v = SPP.SPP_on_broadcastrecords(CUAA_ob_records, br_records, Tr, cutoff=0,
-                                                   init_coor=CUAA_coordinate, recalP=True, doTDC=True, doIDC=True)
+    Xk, Yk, Zk, Q, v = SPP.SPP_on_GPS_broadcastrecords(CUAA_ob_records, br_records, Tr, cutoff=0,
+                                                       init_coor=CUAA_coordinate, recalP=True, doTDC=True, doIDC=True)
     print(Xk, Yk, Zk)
     cal_coors.append([Xk, Yk, Zk])
     true_coors.append(CUAA_coordinate)

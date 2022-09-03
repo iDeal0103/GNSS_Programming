@@ -185,10 +185,13 @@ def paint_3dimensional_scatterplot_of_positionerrors_inNEU(cal_coors: list, true
 
 
 # 随机生成颜色
-def get_cmap(n, name='tab20b'):
+def get_cmap(n, name='tab20b', random=True):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
-    return plt.cm.get_cmap(name, n)
+    cmap = plt.cm.get_cmap(name, n)
+    if random:
+        np.random.shuffle(cmap.colors)
+    return cmap
 
 # 单条绘图数值记录类
 class plot_record():
@@ -223,8 +226,8 @@ class plot_records_manager():
            elif form == "scatter":
                plt.scatter(x, y, color=colors(labels.index(label)), label=label)
         plt.title(self.title)
-        # plt.legend(loc='best', ncol=5)
-        # plt.legend(loc='best')
+        plt.legend(loc='best', ncol=5)
+        plt.legend(loc='best')
         plt.xticks(fontsize=15)
         plt.yticks(fontsize=15)
         plt.grid()
@@ -375,7 +378,7 @@ class plot_obsnoise_bystationsvn():
 
 
 # 绘制坐标
-# 绘制定位误差
+# 绘制坐标
 def plot_coors_xyz(coors):
     # 构造画图数据
     ns = []
@@ -414,6 +417,54 @@ def plot_coors_xyz(coors):
     ax.grid()
     # 显示结果
     plt.show()
+
+
+# 绘制定位误差
+def plot_poscoorres_neu(pos_records, true_coor, xyz2neu=True, form="plot", T_series=""):
+    # 构造画图数据
+    delta_ns = []
+    delta_es = []
+    delta_us = []
+    T_series = []
+    for pos_record in pos_records:
+        pos_record.get_baseline(true_coor, xyz2neu=xyz2neu)
+        delta_es.append(pos_record.pos_value[0])
+        delta_ns.append(pos_record.pos_value[1])
+        delta_us.append(pos_record.pos_value[2])
+        T_series.append(pos_record.T)
+    # 绘图
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
+    if not T_series:
+        if form == "scatter":
+            plt.scatter([i for i in range(len(delta_us))], delta_us, color="b", label="U")
+            plt.scatter([i for i in range(len(delta_ns))], delta_ns, color="r", label="N")
+            plt.scatter([i for i in range(len(delta_es))], delta_es, color="g", label="E")
+            plt.xlabel("epoch", fontsize=15)
+        elif form == "plot":
+            plt.plot(delta_us, color="b", label="U")
+            plt.plot(delta_ns, color="r", label="N")
+            plt.plot(delta_es, color="g", label="E")
+            plt.xlabel("epoch", fontsize=15)
+    else:
+        if form == "scatter":
+            plt.scatter(T_series, delta_us, color="b", label="U")
+            plt.scatter(T_series, delta_ns, color="r", label="N")
+            plt.scatter(T_series, delta_es, color="g", label="E")
+            plt.xlabel("GPST", fontsize=15)
+        elif form == "plot":
+            plt.plot(T_series, delta_us, color="b", label="U")
+            plt.plot(T_series, delta_ns, color="r", label="N")
+            plt.plot(T_series, delta_es, color="g", label="E")
+            plt.xlabel("GPST", fontsize=15)
+    plt.ylabel('各方向定位误差/m', fontsize=15)
+    plt.legend(loc='upper right', fontsize=17)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.title("NEU误差序列图")
+    plt.grid()
+    plt.show()
+    return delta_ns, delta_es, delta_us
 
 
 

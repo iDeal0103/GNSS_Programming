@@ -14,9 +14,17 @@ comment：
 """
 
 # 地球重力常数,即GM
-miu = 3.986005e14
+miu_GPS = 3.986005e14
+miu_BDS = 3.986004418e14
+miu_GLO = 3.9860044e14
+miu_GAL = 3.986004418e14
+
 # 地球自转角速度,单位为rad/s
-we = 7.2921151467e-5
+we_GPS = 7.2921151467e-5
+we_BDS = 7.292115E-5
+we_GLO = 7.292115E-5
+we_GAL = 7.2921151467E-5
+
 # 地球椭球长半轴
 a = 6378137.0
 # 地球椭球扁率
@@ -59,5 +67,8 @@ def get_lamb_from_band(band):
 
 
 
+
+# 卫星号
+BDS_svn = ["C" + '{:0>2d}'.format(int(prn)) for prn in range(1, 81)]
 
 

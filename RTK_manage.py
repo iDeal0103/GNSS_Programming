@@ -140,7 +140,7 @@ class DD_records_atTr:
             if band_is_carrierphase(band):
                 self.DD_ambiguitys[band] = []
                 self.DD_ambiguitys_noise[band] = []
-        self.init_amb_noise = 10000000     # 模糊度初始值对应的噪声方差
+        self.init_amb_noise = 100000     # 模糊度初始值对应的噪声方差
         self.DD_GF = {}
 
     def set_base_satellite(self, base_SVN, sta1obs_records_Tr, sta2obs_records_Tr):
@@ -470,32 +470,46 @@ class Kalman_Filter():
         hx = []
         for DD_data in self.DD_records.DD_observations_data[self.cp_band]:
             # 计算站1星1元素
-            ts_sta1sat1, dts_sta1sat1 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat1, DD_data.obs1_sat1.data[self.pr_band]['observation'], nav_data, doCRC=True)
+            ts_sta1sat1, dts_sta1sat1 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat1, DD_data.obs1_sat1.data[self.pr_band]['observation'], nav_data, doCRC=False)
             coorX_sta1sat1, coorY_sta1sat1, coorZ_sta1sat1 = SatellitePosition.cal_SatellitePosition_GPS_GPSws(ts_sta1sat1, DD_data.sat1, nav_data)
             dt_sta1sat1 = DD_data.obs1_sat1.data[self.pr_band]['observation'] / c
             Xeci_sta1sat1, Yeci_sta1sat1, Zeci_sta1sat1 = CoorTransform.earth_rotation_correction([coorX_sta1sat1, coorY_sta1sat1, coorZ_sta1sat1], dt_sta1sat1)
             lou_sta1sat1 = CoorTransform.cal_distance(sta1_coor, [Xeci_sta1sat1, Yeci_sta1sat1, Zeci_sta1sat1])
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.3f'%coorX_sta1sat1) + " " + str('%.3f'%coorY_sta1sat1) + " " + str('%.3f'%coorZ_sta1sat1)
+            ResultAnalyse.trace(info)
 
             # 计算站1星2元素
-            ts_sta1sat2, dts_sta1sat2 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat2, DD_data.obs1_sat2.data[self.pr_band]['observation'], nav_data, doCRC=True)
+            ts_sta1sat2, dts_sta1sat2 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat2, DD_data.obs1_sat2.data[self.pr_band]['observation'], nav_data, doCRC=False)
             coorX_sta1sat2, coorY_sta1sat2, coorZ_sta1sat2 = SatellitePosition.cal_SatellitePosition_GPS_GPSws(ts_sta1sat2, DD_data.sat2, nav_data)
             dt_sta1sat2 = DD_data.obs1_sat2.data[self.pr_band]['observation'] / c
             Xeci_sta1sat2, Yeci_sta1sat2, Zeci_sta1sat2 = CoorTransform.earth_rotation_correction([coorX_sta1sat2, coorY_sta1sat2, coorZ_sta1sat2], dt_sta1sat2)
             lou_sta1sat2 = CoorTransform.cal_distance(sta1_coor, [Xeci_sta1sat2, Yeci_sta1sat2, Zeci_sta1sat2])
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.3f'%coorX_sta1sat2) + " " + str('%.3f'%coorY_sta1sat2) + " " + str('%.3f'%coorZ_sta1sat2)
+            ResultAnalyse.trace(info)
 
             # 计算站2星1元素
-            ts_sta2sat1, dts_sta2sat1 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat1, DD_data.obs2_sat1.data[self.pr_band]['observation'], nav_data, doCRC=True)
+            ts_sta2sat1, dts_sta2sat1 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat1, DD_data.obs2_sat1.data[self.pr_band]['observation'], nav_data, doCRC=False)
             coorX_sta2sat1, coorY_sta2sat1, coorZ_sta2sat1 = SatellitePosition.cal_SatellitePosition_GPS_GPSws(ts_sta2sat1, DD_data.sat1, nav_data)
             dt_sta2sat1 = DD_data.obs2_sat1.data[self.pr_band]['observation'] / c
             Xeci_sta2sat1, Yeci_sta2sat1, Zeci_sta2sat1 = CoorTransform.earth_rotation_correction([coorX_sta2sat1, coorY_sta2sat1, coorZ_sta2sat1], dt_sta2sat1)
             lou_sta2sat1 = CoorTransform.cal_distance(sta2_coor, [Xeci_sta2sat1, Yeci_sta2sat1, Zeci_sta2sat1])
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.5f'%coorX_sta2sat1) + " " + str('%.5f'%coorY_sta2sat1) + " " + str('%.5f'%coorZ_sta2sat1)
+            # info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.3f' % Xeci_sta2sat1) + " " + str('%.3f' % Yeci_sta2sat1) + " " + str('%.3f' % Zeci_sta2sat1)
+            ResultAnalyse.trace(info)
+            # print('dr=', math.sqrt(coorX_sta2sat1 ** 2 + coorY_sta2sat1 ** 2) - math.sqrt(Xeci_sta2sat1 ** 2 + Yeci_sta2sat1 ** 2), 'dz=', coorZ_sta2sat1 - Zeci_sta2sat1)
 
             # 计算站2星2元素
-            ts_sta2sat2, dts_sta2sat2 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat2, DD_data.obs2_sat2.data[self.pr_band]['observation'], nav_data, doCRC=True)
+            ts_sta2sat2, dts_sta2sat2 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat2, DD_data.obs2_sat2.data[self.pr_band]['observation'], nav_data, doCRC=False)
             coorX_sta2sat2, coorY_sta2sat2, coorZ_sta2sat2 = SatellitePosition.cal_SatellitePosition_GPS_GPSws(ts_sta2sat2, DD_data.sat2, nav_data)
             dt_sta2sat2 = DD_data.obs2_sat2.data[self.pr_band]['observation'] / c
             Xeci_sta2sat2, Yeci_sta2sat2, Zeci_sta2sat2 = CoorTransform.earth_rotation_correction([coorX_sta2sat2, coorY_sta2sat2, coorZ_sta2sat2], dt_sta2sat2)
             lou_sta2sat2 = CoorTransform.cal_distance(sta2_coor, [Xeci_sta2sat2, Yeci_sta2sat2, Zeci_sta2sat2])
+            # 输出地球自转改正前的坐标
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.5f'%coorX_sta2sat2) + " " + str('%.5f'%coorY_sta2sat2) + " " + str('%.5f'%coorZ_sta2sat2)
+            # 输出地球自转改正后的坐标
+            # info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.3f' % Xeci_sta2sat2) + " " + str('%.3f' % Yeci_sta2sat2) + " " + str('%.3f' % Zeci_sta2sat2)
+            ResultAnalyse.trace(info)
+            # print('dr=', math.sqrt(coorX_sta2sat2 ** 2 + coorY_sta2sat2 ** 2) - math.sqrt(Xeci_sta2sat2 ** 2 + Yeci_sta2sat2 ** 2), 'dz=', coorZ_sta2sat2 - Zeci_sta2sat2)
 
             # 构造几何系数阵
             X2, Y2, Z2 = sta2_coor
@@ -514,6 +528,10 @@ class Kalman_Filter():
         hx1 = np.array(2*hx)
         hx2 = get_lamb_from_band(self.cp_band) * np.array(x_array[3:].tolist() + [0 for i in range(len(x_array[3:].tolist()))])
         hx = hx1+hx2
+        ResultAnalyse.trace("H=")
+        ResultAnalyse.tracemat(H)
+        ResultAnalyse.trace("hx=")
+        ResultAnalyse.tracemat(hx, 15, 4)
         return H, hx
 
     def gety(self):
@@ -521,9 +539,15 @@ class Kalman_Filter():
         y2 = []
         for DD_data in self.DD_records.DD_observations_data[self.cp_band]:
             y1.append(get_lamb_from_band(self.cp_band) * DD_data.DD_obs)
+            info = str(DD_data.T) + self.cp_band + DD_data.sat1 + "-" + DD_data.sat2 + " " + str(DD_data.DD_obs)
+            ResultAnalyse.trace(info)
         for DD_data in self.DD_records.DD_observations_data[self.pr_band]:
             y2.append(DD_data.DD_obs)
+            info = str(DD_data.T) + self.pr_band + DD_data.sat1 + "-" + DD_data.sat2 + " " + str(DD_data.DD_obs)
+            ResultAnalyse.trace(info)
         y = np.array(y1+y2)
+        ResultAnalyse.trace("y=")
+        ResultAnalyse.tracemat(y, 15, 4)
         return y
 
     def getx(self, sta2_coor):
@@ -545,16 +569,22 @@ class Kalman_Filter():
         # 动态基线模式
         elif self.mode == 1:
             Q = np.diag([10, 10, 10] + Qs)
+        ResultAnalyse.trace("Q=")
+        ResultAnalyse.tracemat(Q)
         return Q
 
-    def getR(self, sigma1=0.02, sigma2=3):
+    def getR(self, sigma1=0.002, sigma2=2):
         nDD = len(self.DD_records.DD_observations_data[self.cp_band])
         covDD = np.full((nDD, nDD), 1).astype(float)
         for i in range(nDD):
             covDD[i, i] = 2
+        # for i in range(1, nDD-3):
+        #     covDD[i, i] = 3
         covDD1 = 2 * sigma1**2 * covDD
         covDD2 = 2 * sigma2**2 * covDD
         R = RTK.diagonalize_squarematrix(covDD1, covDD2)
+        ResultAnalyse.trace("R=")
+        ResultAnalyse.tracemat(R)
         return R
 
     def ekf_estimation(self, P_before, sta1_coor, sta2_coor, nav_records):
@@ -768,6 +798,8 @@ class Kalman_Filter_with_baseline_constrained():
             dt_sta1sat1 = DD_data.obs1_sat1.data[self.pr_band]['observation'] / c
             Xeci_sta1sat1, Yeci_sta1sat1, Zeci_sta1sat1 = CoorTransform.earth_rotation_correction([coorX_sta1sat1, coorY_sta1sat1, coorZ_sta1sat1], dt_sta1sat1)
             lou_sta1sat1 = CoorTransform.cal_distance(sta1_coor, [Xeci_sta1sat1, Yeci_sta1sat1, Zeci_sta1sat1])
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat1)) + " sat= " + DD_data.sat1 + " rs= " + str(Xeci_sta1sat1) + " " + str(Yeci_sta1sat1) + " " + str(Zeci_sta1sat1)
+            ResultAnalyse.trace(info)
 
             # 计算站1星2元素
             ts_sta1sat2, dts_sta1sat2 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat2, DD_data.obs1_sat2.data[self.pr_band]['observation'], nav_data, doCRC=True)
@@ -775,6 +807,8 @@ class Kalman_Filter_with_baseline_constrained():
             dt_sta1sat2 = DD_data.obs1_sat2.data[self.pr_band]['observation'] / c
             Xeci_sta1sat2, Yeci_sta1sat2, Zeci_sta1sat2 = CoorTransform.earth_rotation_correction([coorX_sta1sat2, coorY_sta1sat2, coorZ_sta1sat2], dt_sta1sat2)
             lou_sta1sat2 = CoorTransform.cal_distance(sta1_coor, [Xeci_sta1sat2, Yeci_sta1sat2, Zeci_sta1sat2])
+            info=str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat2)) + " sat= " + DD_data.sat2 + " rs= " + str(Xeci_sta1sat2) + " " + str(Yeci_sta1sat2) + " " + str(Zeci_sta1sat2)
+            ResultAnalyse.trace(info)
 
             # 计算站2星1元素
             ts_sta2sat1, dts_sta2sat1 = SPP.cal_EmitTime_from_datetime(DD_data.T, DD_data.sat1, DD_data.obs2_sat1.data[self.pr_band]['observation'], nav_data, doCRC=True)
@@ -844,7 +878,7 @@ class Kalman_Filter_with_baseline_constrained():
             Q = np.diag([1000, 1000, 1000] + Qs)
         return Q
 
-    def getR(self, sigma3, sigma1=0.002, sigma2=3):
+    def getR(self, sigma3, sigma1=0.003, sigma2=0.3):
         nDD = len(self.DD_records.DD_observations_data[self.cp_band])
         covDD = np.full((nDD, nDD), 1).astype(float)
         for i in range(nDD):
@@ -1044,11 +1078,15 @@ def constaneously_RTK_withfilter(start_time, end_time, knownStation_ob_records, 
 
 if __name__ == '__main__':
 
+    import sys
+
+    sys.stderr=open(r"D:\Desktop\wab2_baseline.txt", "w")
+
     # station1_observation_file = r"edata\obs\leij3100.20o"    # 已知站点 leij
     # station2_observation_file = r"edata\obs\zim23100.20o"    # 未知站点 zim2
     station2_observation_file = r"edata\obs\zimm3100.20o"    # 未知站点 zimm
-    # station1_observation_file = r"edata\obs\wab23100.20o"    # 已知站点 wab2
-    station1_observation_file = r"edata\obs\zim23100.20o"  # 已知站点 zim2
+    station1_observation_file = r"edata\obs\wab23100.20o"    # 已知站点 wab2
+    # station1_observation_file = r"edata\obs\zim23100.20o"  # 已知站点 zim2
     # station1_observation_file = r"edata\obs\zimm3100.20o"  # 已知站点 zimm
     broadcast_file = r"edata\sat_obit\brdc3100.20n"
 
@@ -1076,8 +1114,8 @@ if __name__ == '__main__':
 
 
     # 坐标
-    knownStation_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
-    # knownStation_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2
+    # knownStation_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
+    knownStation_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2
     init_coor = [4331297.3480, 567555.6390, 4633133.7280]  # zimm
 
     # knownStation_coor = [-2364336.1554, 4870280.8223, -3360815.9725]  # cuaa
@@ -1088,7 +1126,7 @@ if __name__ == '__main__':
     # init_coor = [-2850405.2169, 4651847.9444, 3292949.6125]  # 602
 
     start_time = datetime.datetime(2020, 11, 5, 0, 0, 0)
-    end_time = datetime.datetime(2020, 11, 5, 23, 59, 0)
+    end_time = datetime.datetime(2020, 11, 5, 5, 0, 0)
     # start_time = datetime.datetime(2021, 1, 3, 16, 0, 0)
     # end_time = datetime.datetime(2021, 1, 3, 20, 59, 0)
     # start_time = datetime.datetime(2021, 2, 9, 0, 0, 0)
@@ -1104,6 +1142,8 @@ if __name__ == '__main__':
     SPP.cal_NEUerrors(true_coors, cal_float_coors, T_series=time_series)
     print("固定解 neu各方向RMSE:", ResultAnalyse.get_NEU_rmse(true_coors, cal_fixed_coors))
     print("浮点解 neu各方向RMSE:", ResultAnalyse.get_NEU_rmse(true_coors, cal_float_coors))
+
+    # sys.stdout.flush()
 
 
 

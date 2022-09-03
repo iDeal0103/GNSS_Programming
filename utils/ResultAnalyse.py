@@ -10,11 +10,15 @@
 
 comment：
     1.计算结果的均方根误差
-
+    2.结果输出
 
 """
 #import module
 import math
+import sys
+
+import numpy as np
+
 import utils.CoorTransform as CoorTransform
 
 
@@ -91,6 +95,13 @@ def get_NEU_rmse(true_coors, cal_coors):
     rms_U = get_rms(delta_U)
     return rms_N, rms_E, rms_U
 
+# 计算NEU方向上的均方根误差
+def get_NEU_rmse_2(delta_N, delta_E, delta_U):
+    rms_N = get_rms(delta_N)
+    rms_E = get_rms(delta_E)
+    rms_U = get_rms(delta_U)
+    return rms_N, rms_E, rms_U
+
 # 计算XYZ方向上的均方根误差
 def get_XYZ_rmse(true_coors, cal_coors):
     delta_X = []
@@ -122,13 +133,21 @@ def get_coor_rmse(true_coors, cal_coors):
 
 
 
+"""
+运行过程信息输出
+"""
+def trace(info):
+    sys.stderr.write(info+"\n")
+    sys.stderr.flush()
 
-
-
-
-
-
-
-
+def tracemat(mat, p=10, q=4):
+    mat = np.asmatrix(mat)
+    m, n = mat.shape
+    for i in range(m):
+        line = ""
+        for j in range(n):
+            line += "%*.*f" % (p, q, mat[i, j])
+        sys.stderr.write(line+"\n")
+        sys.stderr.flush()
 
 

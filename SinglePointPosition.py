@@ -23,9 +23,11 @@ import utils.SatellitePosition as SatellitePosition
 import utils.TimeSystem as TimeSystem
 import utils.CoorTransform as CoorTransform
 import utils.RecordFilter as RecordFilter
+import utils.const as const
 from utils.ErrorReduction import *
 import matplotlib.pyplot as plt
 import utils.ResultAnalyse as ResultAnalyse
+import sys
 
 
 def cal_EmitTime_from_datetime(Tr, the_SVN, P, br_records, doCRC=True, c=299792458):
@@ -41,7 +43,7 @@ def cal_EmitTime_from_datetime(Tr, the_SVN, P, br_records, doCRC=True, c=2997924
     '''
     # 将datetime格式时间转换为精度更高的自定义GPSws时间类
     w, s = TimeSystem.from_datetime_cal_GPSws(Tr)
-    Tr_GPSws = TimeSystem.GPSws(w, round(s))
+    Tr_GPSws = TimeSystem.GPSws(w, s)
     Ts = Tr_GPSws.cal_minus_result(P / c)
 
     # 以下标注的为有问题的计算方法 c!
@@ -72,7 +74,10 @@ def cal_EmitTime_from_datetime(Tr, the_SVN, P, br_records, doCRC=True, c=2997924
         dts2 = SatellitePosition.cal_ClockError_GPSws(Ts, the_SVN, br_records)
     # 此处计算消除卫星钟差后的时间
     ts = Ts.cal_minus_result(dts2)
-    dts = SatellitePosition.cal_ClockError_GPSws_withRelativisticEffect(ts, the_SVN, br_records)
+    if doCRC:
+        dts = SatellitePosition.cal_ClockError_GPSws_withRelativisticEffect(ts, the_SVN, br_records)
+    else:
+        dts = SatellitePosition.cal_ClockError_GPSws(ts, the_SVN, br_records)
     # for i in range(2):
     #     ts = ts.cal_minus_result(dts)
     #     dts = SatellitePosition.cal_ClockError_GPSws_withRelativisticEffect(ts, the_SVN, br_records)
@@ -106,8 +111,8 @@ def observation_isnot_null(station_record, FreqBandList=['L1', 'C2']):
 
 
 #基于广播星历数据进行单点定位
-def SPP_on_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, doCRC=True, recalP=False,
-                            cutoff=30.123456, c=299792458, init_coor=[2000, 2000, 2000]):
+def SPP_on_GPS_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, doCRC=True, recalP=False,
+                                cutoff=30.123456, c=299792458, init_coor=[2000, 2000, 2000], excluded_sats=[]):
     """
     ob_records : GPS_observation_record , 所使用的观测文件记录
     br_records : GPS_brdc_record , 所使用的卫星广播星历记录
@@ -158,6 +163,9 @@ def SPP_on_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, 
             Xeci, Yeci, Zeci = CoorTransform.earth_rotation_correction([coorX, coorY, coorZ], dt)
             # dt2 = CoorTransform.cal_distance([Xk, Yk, Zk], [Xeci, Yeci, Zeci])/c
 
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts)) + " sat= " + the_svn + " rs= " + str('%.3f'%coorX) + " " + str('%.3f'%coorY) + " " + str('%.3f'%coorZ)
+            ResultAnalyse.trace(info)
+
             # 检查高度角是否符合限差
             if no > 1 and cutoff != 30.123456:     # 考虑第一次迭代可能初值不准确，所以第二次后的迭代再加入截止角条件
                 ele, a = CoorTransform.cal_ele_and_A([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
@@ -204,7 +212,133 @@ def SPP_on_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, 
         A = np.array(A).astype('float')
         l = np.array(l).astype('float')
         # 改正数发散太过严重则不再继续平差
-        if abs(max(l.tolist())) > 1e10:
+        if abs(max(l.tolist())) > 1e8:
+            no = 0
+            Q = 10000
+            break
+        x = np.linalg.inv(A.T@Pz@A)@(A.T@Pz@l)
+        print(no, ": ", len(Pz), "星", x)
+        v = A@x-l
+        # 更新参数
+        dXk = x[0]
+        dYk = x[1]
+        dZk = x[2]
+        # ddtr = x[3]/c
+        dtr = x[3]/c
+        Xk += dXk
+        Yk += dYk
+        Zk += dZk
+        # dtr += ddtr
+        Q = np.linalg.inv(A.T @ A)
+        if abs(dXk) < 0.01 and abs(dYk) < 0.01 and abs(dZk) < 0.01:
+            break
+    return Xk, Yk, Zk, Q, v
+
+def SPP_on_BDS_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, doCRC=True, recalP=False,
+                                cutoff=30.123456, c=299792458, init_coor=[2000, 2000, 2000], excluded_sats=[]):
+    """
+    ob_records : GPS_observation_record , 所使用的观测文件记录
+    br_records : GPS_brdc_record , 所使用的卫星广播星历记录
+    Tr : datetime.datetime , 接收机接收到信号的时刻,GPS时刻
+    doIDC : bool , 是否进行电离层改正
+    doTDC : bool , 是否进行对流层改正
+    doCRC : bool , 是否进行相对论钟差改正
+    recalP : bool , 是否用高度角定权
+    cutoff : float , 加入高度角限制条件,单位为度
+    c : const , 光速(单位为m/s)
+    init_coor : list , 观测站坐标初值
+    """
+    # 筛选出某时刻的记录
+    cal_based_record = list(filter(lambda o: o.SVN[0] == "C" and o.time == Tr and o.data != "", ob_records))
+    # 开始迭代前接收机钟差dtr为0
+    dtr = 0
+    # 初始地面点坐标
+    Xk, Yk, Zk = init_coor
+    no = 0
+    Q=0
+    v=0
+    print(Tr)
+    # 平差求解XYZ坐标和接收机钟差
+    while True:
+        # 如果超出平差迭代求解超出8次则跳出
+        if no > 8:
+            break
+        # 计数
+        no += 1
+        # 初始化矩阵
+        A = []
+        l = []
+        Ps = []
+        for record in cal_based_record:
+            if record.SVN in excluded_sats:
+                continue
+            # 如果所选观测值数据为空则跳过
+            if not (record.managed_data_flag['B1_C'] and record.managed_data_flag['B3_C']):
+                continue
+            else:
+                P = record.data['B1_C']['observation']
+            the_svn = record.SVN
+
+            '''根据接收时间,计算信号发射时间及此时卫星所在位置'''
+            ts, dts = cal_EmitTime_from_datetime(Tr, the_svn, P, br_records, doCRC)
+
+            # 修正地球自转影响
+            coorX, coorY, coorZ = SatellitePosition.cal_SatellitePosition_BDS_GPSws(ts, the_svn, br_records)
+            # coorX, coorY, coorZ = SatellitePosition.cal_SatellitePosition_GPS_GPSws(ts, the_svn, br_records)
+            dt = P/c
+            Xeci, Yeci, Zeci = CoorTransform.earth_rotation_correction([coorX, coorY, coorZ], dt, system='C')
+            # dt2 = CoorTransform.cal_distance([Xk, Yk, Zk], [Xeci, Yeci, Zeci])/c
+
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts)) + " sat= " + the_svn + " rs= " + str('%.3f'%coorX) + " " + str('%.3f'%coorY) + " " + str('%.3f'%coorZ)
+            ResultAnalyse.trace(info)
+
+            # 检查高度角是否符合限差
+            if no > 1 and cutoff != 30.123456:     # 考虑第一次迭代可能初值不准确，所以第二次后的迭代再加入截止角条件
+                ele, a = CoorTransform.cal_ele_and_A([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
+                # print(ele *180 / math.pi, ele *180 / math.pi < cutoff)
+                if ele * 180 / math.pi < cutoff:
+                    continue
+
+            # 电离层改正
+            if doIDC:
+                P = Ionospheric_Delay_Correction(record, 'B1_C', 'B3_C', 1575.42, 1268.52)
+            if doTDC:
+                # 对流层延迟改正
+                # P = Tropospheric_Delay_Correction_Hopfield(P, [Xk, Yk, Zk], [Xeci, Yeci, Zeci])
+                P = Tropospheric_Delay_Correction_Saastamoinen(P, [Xk, Yk, Zk], [Xeci, Yeci, Zeci])
+                # P = Tropospheric_Delay_Correction_UNB3(P, Tr, [Xk, Yk, Zk], [Xeci, Yeci, Zeci])
+
+            # 计算系数阵成分
+            lou = CoorTransform.cal_distance([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
+            axki = (Xk-Xeci)/lou
+            ayki = (Yk-Yeci)/lou
+            azki = (Zk-Zeci)/lou
+            # li = P-lou+c*(dts-dtr)
+            li = P - lou + c * dts
+            A.append([axki, ayki, azki, 1])
+            l.append(li)
+            # 构造权阵
+            if recalP:
+                # 计算Pq矩阵
+                N, E, U = CoorTransform.cal_NEU([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
+                Pq = cal_P(N, E, U)
+                Ps.append(Pq)
+            else:
+                Ps.append(1)
+        # 求解
+        if Ps == []:
+            continue
+        Pz = np.diag(Ps).astype('float')
+        # 符合高度角条件的卫星数目不够
+        if len(A) < 4:
+            Xk, Yk, Zk = init_coor
+            Q = -1
+            no = 0
+            break
+        A = np.array(A).astype('float')
+        l = np.array(l).astype('float')
+        # 改正数发散太过严重则不再继续平差
+        if abs(max(l.tolist())) > 1e8:
             no = 0
             Q = 10000
             break
@@ -227,12 +361,12 @@ def SPP_on_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, 
     return Xk, Yk, Zk, Q, v
 
 
-#基于多系统广播星历数据进行单点定位，目前支持GPS+BDS
+# 基于多系统广播星历数据进行单点定位，目前支持GPS+BDS
 def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=True, doCRC=True, recalP=False,
-                            cutoff=30.123456, c=299792458, init_coor=[2000, 2000, 2000]):
+                            cutoff=30.123456, c=299792458, init_coor=[2000, 2000, 2000], include_system=['G','C'], excluded_sats=[]):
     """
-    ob_records : GPS_observation_record , 所使用的观测文件记录
-    br_records : GPS_brdc_record , 所使用的卫星广播星历记录
+    ob_records : GPS/BDS_observation_record , 所使用的观测文件记录
+    br_records : GPS/BDS_brdc_record , 所使用的卫星广播星历记录
     Tr : datetime.datetime , 接收机接收到信号的时刻,GPS时刻
     doIDC : bool , 是否进行电离层改正
     doTDC : bool , 是否进行对流层改正
@@ -243,7 +377,7 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
     init_coor : list , 观测站坐标初值
     """
     # 筛选出某时刻的记录
-    cal_based_record = list(filter(lambda o:(o.SVN[0]=='G' or o.SVN[0]=='C') and o.time == Tr and o.data != "", ob_records))
+    cal_based_record = list(filter(lambda o:(o.SVN[0] == 'G' or o.SVN[0] == 'C') and o.time == Tr and o.data != "", ob_records))
     # 开始迭代前接收机钟差dtr为0
     dtr_gps = 0
     dtr_bds = 0
@@ -264,15 +398,17 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
         l = []
         Ps = []
         for record in cal_based_record:
+            if record.SVN in excluded_sats:
+                continue
             # GPS系统
-            if record.SVN[0] == 'G':
+            if record.SVN[0] == 'G' and 'G' in include_system:
                 # 如果所选观测值数据为空则跳过
-                if not observation_isnot_null(record, ['C1C', 'C2X']):
+                if not observation_isnot_null(record, ['L1_C', 'L2_C']):
                     continue
                 else:
-                    P = record.data['C1C']['observation']
+                    P = record.data['L1_C']['observation']
                 the_svn = record.SVN
-                print(Tr, the_svn, type(P), P)
+                # print(Tr, the_svn, type(P), P)
 
                 '''根据接收时间,计算信号发射时间及此时卫星所在位置'''
                 ts, dts = cal_EmitTime_from_datetime(Tr, the_svn, P, br_records, doCRC)
@@ -283,12 +419,12 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
                 Xeci, Yeci, Zeci=CoorTransform.earth_rotation_correction([coorX, coorY, coorZ], dt)
                 # 电离层改正
                 if doIDC:
-                    P = Ionospheric_Delay_Correction(record, 'C1C', 'C2X', 1575.42, 1227.60)
+                    P = Ionospheric_Delay_Correction(record, 'L1_C', 'L2_C', 1575.42, 1227.60)
 
                 # 检查高度角是否符合限差
                 if no > 1 and cutoff != 30.123456:  # 考虑第一次迭代可能初值不准确，所以第二次后的迭代再加入截止角条件
                     ele, a = CoorTransform.cal_ele_and_A([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
-                    print(ele * 180 / math.pi, ele * 180 / math.pi < cutoff)
+                    # print(ele * 180 / math.pi, ele * 180 / math.pi < cutoff)
                     if ele * 180 / math.pi < cutoff:
                         continue
 
@@ -297,13 +433,6 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
                     # P = Tropospheric_Delay_Correction_Hopfield(P, [Xk, Yk, Zk], [Xeci, Yeci, Zeci])
                     # P = Tropospheric_Delay_Correction_Saastamoinen(P, [Xk, Yk, Zk], [Xeci, Yeci, Zeci])
                     P = Tropospheric_Delay_Correction_UNB3(P, Tr, [Xk, Yk, Zk], [Xeci, Yeci, Zeci])
-                    # doy = cal_doy(Tr)
-                    # ele, a = CoorTransform.cal_ele_and_A([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
-                    # B,L,H = CoorTransform.cal_XYZ2BLH(Xk, Yk, Zk)
-                    # M = Niell(B, H, ele, doy)
-                    # D = UNB3(B, H, doy)
-                    # dtrop = M[0] * D[0] + M[1] * D[1]
-                    # P -= dtrop
                 # 计算系数阵成分
                 lou = CoorTransform.cal_distance([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
                 axki = (Xk - Xeci) / lou
@@ -323,14 +452,14 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
                     Ps.append(1)
 
             # BDS系统
-            elif record.SVN[0] == 'C':
+            elif record.SVN[0] == 'C' and 'C' in include_system:
                 # 如果所选观测值数据为空则跳过
-                if not observation_isnot_null(record, ['C1X', 'C5X']):
+                if not observation_isnot_null(record, ['B1_C', 'B3_C']):
                     continue
                 else:
-                    P = record.data['C1X']['observation']
+                    P = record.data['B1_C']['observation']
                 the_svn = record.SVN
-                print(Tr, the_svn, type(P), P)
+                # print(Tr, the_svn, type(P), P)
 
                 '''根据接收时间,计算信号发射时间及此时卫星所在位置'''
                 ts, dts = cal_EmitTime_from_datetime(Tr, the_svn, P, br_records, doCRC)
@@ -341,12 +470,12 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
                 Xeci, Yeci, Zeci = CoorTransform.earth_rotation_correction([coorX, coorY, coorZ], dt)
                 # 电离层改正
                 if doIDC:
-                    P = Ionospheric_Delay_Correction(record, 'C1X', 'C5X', 1575.42, 1176.45)
+                    P = Ionospheric_Delay_Correction(record, 'B1_C', 'B3_C', 1575.42, 1268.52)
 
                 # 检查高度角是否符合限差
                 if no > 1 and cutoff != 30.123456:  # 考虑第一次迭代可能初值不准确，所以第二次后的迭代再加入截止角条件
                     ele, a = CoorTransform.cal_ele_and_A([Xk, Yk, Zk], [Xeci, Yeci, Zeci])
-                    print(ele * 180 / math.pi, ele * 180 / math.pi < cutoff)
+                    # print(ele * 180 / math.pi, ele * 180 / math.pi < cutoff)
                     if ele * 180 / math.pi < cutoff:
                         continue
 
@@ -385,7 +514,6 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
                         Ps.append(0.5)
                     else:
                         Ps.append(1)
-
         # 求解
         if Ps == []:
             continue
@@ -404,6 +532,7 @@ def SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, doIDC=True, doTDC=
             Q = 10000
             break
         x = np.linalg.inv(A.T@Pz@A)@(A.T@Pz@l)
+        print(no, ": ", len(Pz), "星", x)
         v = A@x-l
         # 更新参数
         dXk = x[0]
@@ -627,53 +756,57 @@ def cal_NEUerror(true_coor, cal_coor):
 
 
 if __name__=="__main__":
+
+    sys.stderr=open(r"D:\Desktop\pnt2_unmodified.txt", "w")
+
     # observation_file=r"E:\大三下\卫星与导航定位\代码集合\Satellite_Navigation_and_Positioning\data\obs\warn3100.20o"
     # observation_file = r"edata\obs\leij3100.20o"
     # observation_file = r"edata\obs\chan3100.20o"
-    observation_file = r"edata\obs\wab23100.20o"
+    # observation_file = r"edata\obs\wab23100.20o"
     # observation_file = r"edata\obs\warn3100.20o"
     # observation_file = r"edata\obs\warn3120.20o"
     # observation_file = r"edata\obs\zimm3100.20o"  # zimm
     # observation_file = r"edata\obs\zim23100.20o"  # zim2
-    # observation_file = r"edata\obs\renix3\WARN00DEU_R_20203100000_01D_30S_MO.rnx"
-    broadcast_file = r"edata\sat_obit\brdc3100.20n"
+    observation_file = r"edata\obs\rinex3\WARN00DEU_R_20203100000_01D_30S_MO.rnx"
+    # broadcast_file = r"edata\sat_obit\brdc3100.20n"
     # broadcast_file = r"edata\sat_obit\brdc3120.20n"
-    # broadcast_file = r"edata\sat_obit\BRDM00DLR_S_20203100000_01D_MN.rnx"
+    broadcast_file = r"edata\sat_obit\BRDM00DLR_S_20203100000_01D_MN.rnx"
     # igs_file=r"E:\大三下\卫星与导航定位\代码集合\Satellite_Navigation_and_Positioning\data\sat_obit\igs21304.sp3"
     # clk_file=r"F:\360MoveData\Users\hp\Desktop\emr21304.clk"
     # 读入观测文件内容,得到类型对象列表
-    ob_records = DoFile.read_Rinex2_oFile(observation_file)
-    # ob_records = DoFile.read_Rinex3_oFile(observation_file)
-    br_records = DoFile.read_GPS_nFile(broadcast_file)
-    # br_records = DoFile.read_Renix304_nFile(broadcast_file)
+    # ob_records = DoFile.read_Rinex2_oFile(observation_file)
+    ob_records = DoFile.read_Rinex3_oFile(observation_file)
+    # br_records = DoFile.read_GPS_nFile(broadcast_file)
+    br_records = DoFile.read_Renix304_nFile(broadcast_file)
     # br_records = RecordFilter.GPSBrdcRecord_HourIntegerRecord_Filter(br_records)
     # pe_records=DoFile.read_GPS_sp3File(igs_file)
     # clk_records=DoFile.read_GPS_clkFile(clk_file)[0]
     # 给入选定时刻
-    Tr = datetime.datetime(2020, 11, 5, 0, 1, 0)
-    # init_coor=[3658785.6000, 784471.1000, 5147870.7000]   #warn
+    Tr = datetime.datetime(2020, 11, 5, 16, 0, 0)
+    init_coor=[3658785.6000, 784471.1000, 5147870.7000]   #warn
     # init_coor=[-2674431.9143, 3757145.2969, 4391528.8732]   #chan
     # init_coor = [10, 10, 10]
     # init_coor = [4331297.3480, 567555.6390, 4633133.7280]  # zimm
     # init_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
-    init_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2
+    # init_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2
     true_coors = []
     cal_coors = []
     vs = []
-    while Tr < datetime.datetime(2020, 11, 5, 10, 59, 00):
+    while Tr < datetime.datetime(2020, 11, 5, 17, 0, 0):
         # Xk,Yk,Zk,Q=SPP.SPP_on_broadcastfile(observation_file,broadcast_file,Tr)
-        Xk, Yk, Zk, Q, v = SPP_on_broadcastrecords(ob_records, br_records, Tr, init_coor=init_coor, recalP=True, doTDC=True, doIDC=True)
+        # Xk, Yk, Zk, Q, v = SPP_on_GPS_broadcastrecords(ob_records, br_records, Tr, init_coor=init_coor, recalP=True, doTDC=True, doIDC=True)
+        Xk, Yk, Zk, Q, v = SPP_on_BDS_broadcastrecords(ob_records, br_records, Tr, init_coor=init_coor, recalP=True, doTDC=True, doIDC=True,excluded_sats=["C01", "C02", "C03", "C04", "C05", "C59", "C60", 'C56', 'C57', 'C58'])
         # Xk, Yk, Zk, Q, v = SPP_on_mixed_broadcastrecords(ob_records, br_records, Tr, cutoff=15, init_coor=init_coor,
-        #                                            recalP=True, doTDC=True, doIDC=True)
+        #                                            recalP=True, doTDC=True, doIDC=True, excluded_sats=['C56', 'C57', 'C58'])
         cal_coors.append([Xk, Yk, Zk])
         vs.append(v)
         # print(Xk, Yk, Zk, Q, v)
-        # true_coors.append([0.365878555276965E+07, 0.784471127238666E+06, 0.514787071062059E+07])  #warn
+        true_coors.append([0.365878555276965E+07, 0.784471127238666E+06, 0.514787071062059E+07])  #warn
         # true_coors.append([4331297.3480, 567555.6390, 4633133.7280])  # zimm
         # true_coors.append([4331300.1600, 567537.0810, 4633133.5100])  # zim2
         # true_coors.append([0.389873613453103E+07,0.855345521080705E+06,0.495837257579542E+07])   #leij
         # true_coors.append([-0.267442768572702E+07, 0.375714305701559E+07, 0.439152148514515E+07])  #chan
-        true_coors.append([4327318.2325, 566955.9585, 4636425.9246])  # wab2
+        # true_coors.append([4327318.2325, 566955.9585, 4636425.9246])  # wab2
         Tr += datetime.timedelta(seconds=30)
     cal_NEUerrors(true_coors, cal_coors)
     cal_XYZerrors(true_coors, cal_coors)
