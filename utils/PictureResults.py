@@ -233,6 +233,12 @@ class plot_records_manager():
         plt.grid()
         plt.show()
 
+    def plot_all_records(self, form="plot"):
+        labels = list(set([record.label for record in self.plot_records]))
+        self.plot_by_labels(labels, form)
+
+
+
 
 # 绘制伪距+相位双差残差类
 class plot_DDresidual_bysvn():

@@ -101,7 +101,7 @@ def earth_rotation_correction(coor, dt, system='G'):
         dt : 信号从卫星传播到观测站的时间
     Returns
     -------
-        Xeci,Yeci,Zeci : 发射信号时刻卫星,在观测站接收到信号时刻的ECEF坐标系中的坐标
+        Xeci,Yeci,Zeci : 发射信号时刻卫星,在观测站接收到信号时刻的eci坐标系中的坐标
 
     """
     if system=="G":

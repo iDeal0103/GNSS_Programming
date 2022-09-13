@@ -136,10 +136,10 @@ def get_ephemeris_second(ws):
 
 
 # 计算timedelta对象的second值
-def cal_deltatime_second(datetime_time):
-    day = datetime_time.days
-    sec = datetime_time.seconds
-    micsec = datetime_time.microseconds
+def cal_deltatime_second(datetime_timedelta):
+    day = datetime_timedelta.days
+    sec = datetime_timedelta.seconds
+    micsec = datetime_timedelta.microseconds
     delta_time = day*86400+sec+micsec/1000000
     return delta_time
 

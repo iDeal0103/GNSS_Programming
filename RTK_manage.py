@@ -475,7 +475,7 @@ class Kalman_Filter():
             dt_sta1sat1 = DD_data.obs1_sat1.data[self.pr_band]['observation'] / c
             Xeci_sta1sat1, Yeci_sta1sat1, Zeci_sta1sat1 = CoorTransform.earth_rotation_correction([coorX_sta1sat1, coorY_sta1sat1, coorZ_sta1sat1], dt_sta1sat1)
             lou_sta1sat1 = CoorTransform.cal_distance(sta1_coor, [Xeci_sta1sat1, Yeci_sta1sat1, Zeci_sta1sat1])
-            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.3f'%coorX_sta1sat1) + " " + str('%.3f'%coorY_sta1sat1) + " " + str('%.3f'%coorZ_sta1sat1)
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat1)) + " sat=" + DD_data.sat1 + " rs=" + str('%20.6f' % coorX_sta1sat1) + " " + str('%20.6f' % coorY_sta1sat1) + " " + str('%20.6f' % coorZ_sta1sat1)
             ResultAnalyse.trace(info)
 
             # 计算站1星2元素
@@ -484,7 +484,7 @@ class Kalman_Filter():
             dt_sta1sat2 = DD_data.obs1_sat2.data[self.pr_band]['observation'] / c
             Xeci_sta1sat2, Yeci_sta1sat2, Zeci_sta1sat2 = CoorTransform.earth_rotation_correction([coorX_sta1sat2, coorY_sta1sat2, coorZ_sta1sat2], dt_sta1sat2)
             lou_sta1sat2 = CoorTransform.cal_distance(sta1_coor, [Xeci_sta1sat2, Yeci_sta1sat2, Zeci_sta1sat2])
-            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.3f'%coorX_sta1sat2) + " " + str('%.3f'%coorY_sta1sat2) + " " + str('%.3f'%coorZ_sta1sat2)
+            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta1sat2)) + " sat=" + DD_data.sat2 + " rs=" + str('%20.6f' % coorX_sta1sat2) + " " + str('%20.6f' % coorY_sta1sat2) + " " + str('%20.6f' % coorZ_sta1sat2)
             ResultAnalyse.trace(info)
 
             # 计算站2星1元素
@@ -493,9 +493,9 @@ class Kalman_Filter():
             dt_sta2sat1 = DD_data.obs2_sat1.data[self.pr_band]['observation'] / c
             Xeci_sta2sat1, Yeci_sta2sat1, Zeci_sta2sat1 = CoorTransform.earth_rotation_correction([coorX_sta2sat1, coorY_sta2sat1, coorZ_sta2sat1], dt_sta2sat1)
             lou_sta2sat1 = CoorTransform.cal_distance(sta2_coor, [Xeci_sta2sat1, Yeci_sta2sat1, Zeci_sta2sat1])
-            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.5f'%coorX_sta2sat1) + " " + str('%.5f'%coorY_sta2sat1) + " " + str('%.5f'%coorZ_sta2sat1)
+            # info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.5f'%coorX_sta2sat1) + " " + str('%.5f'%coorY_sta2sat1) + " " + str('%.5f'%coorZ_sta2sat1)
             # info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat1)) + " sat= " + DD_data.sat1 + " rs= " + str('%.3f' % Xeci_sta2sat1) + " " + str('%.3f' % Yeci_sta2sat1) + " " + str('%.3f' % Zeci_sta2sat1)
-            ResultAnalyse.trace(info)
+            # ResultAnalyse.trace(info)
             # print('dr=', math.sqrt(coorX_sta2sat1 ** 2 + coorY_sta2sat1 ** 2) - math.sqrt(Xeci_sta2sat1 ** 2 + Yeci_sta2sat1 ** 2), 'dz=', coorZ_sta2sat1 - Zeci_sta2sat1)
 
             # 计算站2星2元素
@@ -505,10 +505,10 @@ class Kalman_Filter():
             Xeci_sta2sat2, Yeci_sta2sat2, Zeci_sta2sat2 = CoorTransform.earth_rotation_correction([coorX_sta2sat2, coorY_sta2sat2, coorZ_sta2sat2], dt_sta2sat2)
             lou_sta2sat2 = CoorTransform.cal_distance(sta2_coor, [Xeci_sta2sat2, Yeci_sta2sat2, Zeci_sta2sat2])
             # 输出地球自转改正前的坐标
-            info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.5f'%coorX_sta2sat2) + " " + str('%.5f'%coorY_sta2sat2) + " " + str('%.5f'%coorZ_sta2sat2)
+            # info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.5f'%coorX_sta2sat2) + " " + str('%.5f'%coorY_sta2sat2) + " " + str('%.5f'%coorZ_sta2sat2)
             # 输出地球自转改正后的坐标
             # info = str(TimeSystem.from_GPSws_cal_datetime_2(ts_sta2sat2)) + " sat= " + DD_data.sat2 + " rs= " + str('%.3f' % Xeci_sta2sat2) + " " + str('%.3f' % Yeci_sta2sat2) + " " + str('%.3f' % Zeci_sta2sat2)
-            ResultAnalyse.trace(info)
+            # ResultAnalyse.trace(info)
             # print('dr=', math.sqrt(coorX_sta2sat2 ** 2 + coorY_sta2sat2 ** 2) - math.sqrt(Xeci_sta2sat2 ** 2 + Yeci_sta2sat2 ** 2), 'dz=', coorZ_sta2sat2 - Zeci_sta2sat2)
 
             # 构造几何系数阵
@@ -597,6 +597,9 @@ class Kalman_Filter():
         H, hx = self.getH(nav_records, sta1_coor, sta2_coor, x_pri)
         R = self.getR()
         y = self.gety()
+        v = y-hx
+        ResultAnalyse.trace("v=")
+        ResultAnalyse.tracemat(v, 15, 4)
         K = P_pri @ H.T @ np.linalg.inv(H @ P_pri @ H.T + R)
         x_est = x_pri + K @ (y - hx)
         # 输出残差
@@ -1085,8 +1088,8 @@ if __name__ == '__main__':
     # station1_observation_file = r"edata\obs\leij3100.20o"    # 已知站点 leij
     # station2_observation_file = r"edata\obs\zim23100.20o"    # 未知站点 zim2
     station2_observation_file = r"edata\obs\zimm3100.20o"    # 未知站点 zimm
-    station1_observation_file = r"edata\obs\wab23100.20o"    # 已知站点 wab2
-    # station1_observation_file = r"edata\obs\zim23100.20o"  # 已知站点 zim2
+    # station1_observation_file = r"edata\obs\wab23100.20o"    # 已知站点 wab2
+    station1_observation_file = r"edata\obs\zim23100.20o"  # 已知站点 zim2
     # station1_observation_file = r"edata\obs\zimm3100.20o"  # 已知站点 zimm
     broadcast_file = r"edata\sat_obit\brdc3100.20n"
 
@@ -1114,8 +1117,8 @@ if __name__ == '__main__':
 
 
     # 坐标
-    # knownStation_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
-    knownStation_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2
+    knownStation_coor = [4331300.1600, 567537.0810, 4633133.5100]  # zim2
+    # knownStation_coor = [4327318.2325, 566955.9585, 4636425.9246]  # wab2
     init_coor = [4331297.3480, 567555.6390, 4633133.7280]  # zimm
 
     # knownStation_coor = [-2364336.1554, 4870280.8223, -3360815.9725]  # cuaa

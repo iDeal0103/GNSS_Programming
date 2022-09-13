@@ -257,7 +257,7 @@ class Renix304_navigation_record_BDS():
         self.Cus = getfloat(data[2][42:61])
         self.sqrt_a = getfloat(data[2][61:80])
         # 解析第四行
-        self.toe = getfloat(data[3][4:23]) + 14
+        self.toe = getfloat(data[3][4:23]) + 14.0  # 直接转换为GPS时间
         # self.toe = getfloat(data[3][4:23])
         self.Cic = getfloat(data[3][23:42])
         self.omega0 = getfloat(data[3][42:61])
@@ -270,7 +270,7 @@ class Renix304_navigation_record_BDS():
         # 解析第六行
         self.i_dot = getfloat(data[5][4:23])
         self.spare1 = getfloat(data[5][23:42])
-        self.BDS_week = getfloat(data[5][42:61]) + 1356
+        self.BDS_week = getfloat(data[5][42:61]) + 1356  # 直接转换为GPS时间
         # self.BDS_week = getfloat(data[5][42:61])
         self.spare2 = getfloat(data[5][61:80])
 
